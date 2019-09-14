@@ -45,6 +45,7 @@ file(GLOB ZLib ${Sources}/ZLib/*.cpp ${Sources}/ZLib/*.c)
 # remove compiling issues
 list(REMOVE_ITEM LibJPEG ${Sources}/LibJPEG/jmemdos.c)
 list(REMOVE_ITEM LibJPEG ${Sources}/LibJPEG/jmemmac.c)
+list(REMOVE_ITEM LibJPEG ${Sources}/LibJPEG/ansi2knr.c)
 list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_unix.c)
 list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_vms.c)
 list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_win32.c)
