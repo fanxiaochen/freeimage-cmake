@@ -1,20 +1,16 @@
 cmake_minimum_required(VERSION 2.8.0)
 
-# FreeImage version
-SET( FREEIMAGE_VERSION_MAIN 3)
-SET( FREEIMAGE_VERSION_MIDDLE 16)
-SET( FREEIMAGE_VERSION_LOWER 0)
-SET( FREEIMAGE_VERSION_MINOR 0)
-SET( FREEIMAGE_VERSION ${FREEIMAGE_VERSION_MAIN}.${FREEIMAGE_VERSION_MIDDLE}.${FREEIMAGE_VERSION_LOWER} )
-SET( FREEIMAGE_VERSION_BUILD ${FREEIMAGE_VERSION_MAIN}.${FREEIMAGE_VERSION_MIDDLE}.${FREEIMAGE_VERSION_LOWER}.${FREEIMAGE_VERSION_MINOR} )
-
-
+# only test on linux
 OPTION(ENABLE_PNG "Enable PNG support" 1)
 OPTION(ENABLE_JPEG "Enable JPEG support" 1)
 OPTION(ENABLE_TIFF "Enable TIFF support" 1)
+OPTION(ENABLE_JXR "Enable JXR support" 1)
+
+# currently these parts not working 
 OPTION(ENABLE_WEBP "Enable WebP support" 0)
 OPTION(ENABLE_RAW "Enable RAW support" 0)
 OPTION(ENABLE_OPENJP "Enable OpenJPEG support" 0)
+OPTION(ENABLE_OPENEXR "Enable OpenEXR support" 0)
 
 project (FreeImage)
 
@@ -24,63 +20,72 @@ INCLUDE(CheckIncludeFileCXX)
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckTypeSize)
 
-# Find packages
-FIND_PACKAGE(ZLIB REQUIRED)
-SET(LIBS ${ZLIB_LIBRARIES})
+add_definitions(-DNO_LCMS -D__ANSI__ -DDISABLE_PERF_MEASUREMENT)
+
+# headers
+include_directories ( Source Source/Metadata Source/FreeImageToolkit Source/LibJPEG Source/LibPNG Source/LibTIFF4 Source/ZLib Source/LibOpenJPEG Source/OpenEXR Source/OpenEXR/Half Source/OpenEXR/Iex Source/OpenEXR/IlmImf Source/OpenEXR/IlmThread Source/OpenEXR/Imath Source/OpenEXR/IexMath Source/LibRawLite Source/LibRawLite/dcraw Source/LibRawLite/internal Source/LibRawLite/libraw Source/LibRawLite/src Source/LibWebP Source/LibJXR Source/LibJXR/common/include Source/LibJXR/image/sys Source/LibJXR/jxrgluelib)
+
+# SOURCES
+set(Sources ${PROJECT_SOURCE_DIR}/Source)
+file(GLOB DeprecationManager ${Sources}/DeprecationManager/*.c ${Sources}/DeprecationManager/*.cpp)
+file(GLOB FreeImage ${Sources}/FreeImage/*.cpp ${Sources}/FreeImage/*.c)
+file(GLOB FreeImageToolkit ${Sources}/FreeImageToolkit/*.c ${Sources}/FreeImageToolkit/*.cpp)
+file(GLOB LibJPEG ${Sources}/LibJPEG/*.c ${Sources}/LibJPEG/*.cpp)
+file(GLOB_RECURSE LibJXR ${Sources}/LibJXR/*.c ${Sources}/LibJXR/*.cpp)
+file(GLOB LibOpenJPEG ${Sources}/LibOpenJPEG/*.cpp ${Sources}/LibOpenJPEG/*.c)
+file(GLOB LibPNG ${Sources}/LibPNG/*.cpp ${Sources}/LibPNG/*.c)
+file(GLOB_RECURSE LibRawLite ${Sources}/LibRawLite/*.c ${Sources}/LibRawLite/*.cpp)
+file(GLOB LibTIFF4 ${Sources}/LibTIFF4/*cpp ${Sources}/LibTIFF4/*.c)
+file(GLOB_RECURSE LibWebP ${Sources}/LibWebP/*.cpp ${Sources}/LibWebP/*.c)
+file(GLOB Metadata ${Sources}/Metadata/*.c ${Sources}/Metadata/*.cpp)
+file(GLOB_RECURSE OpenEXR ${Sources}/OpenEXR/*.cpp ${Sources}/OpenEXR/*.c)
+file(GLOB ZLib ${Sources}/ZLib/*.cpp ${Sources}/ZLib/*.c)
+
+# only works on linux
+# remove compiling issues
+list(REMOVE_ITEM LibJPEG ${Sources}/LibJPEG/jmemdos.c)
+list(REMOVE_ITEM LibJPEG ${Sources}/LibJPEG/jmemmac.c)
+list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_unix.c)
+list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_vms.c)
+list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_win32.c)
+list(REMOVE_ITEM LibTIFF4 ${Sources}/LibTIFF4/tif_wince.c)
+
+SET(LIBS 
+${DeprecationManager}
+${FreeImage}
+${FreeImageToolkit}
+${ZLib}
+)
+
 
 IF(ENABLE_PNG)
-  FIND_PACKAGE(PNG REQUIRED)
-  SET(LIBS ${LIBS} ${PNG_LIBRARIES})
-  ADD_DEFINITIONS(-DENABLE_PNG)
+  SET(LIBS ${LIBS} ${LibPNG})
 ENDIF()
 IF(ENABLE_JPEG)
-  FIND_PACKAGE(JPEG REQUIRED)
-  SET(LIBS ${LIBS} ${JPEG_LIBRARIES})
-  ADD_DEFINITIONS(-DENABLE_JPEG)
+  SET(LIBS ${LIBS} ${LibJPEG})
 ENDIF()
 IF(ENABLE_TIFF)
-  FIND_PACKAGE(TIFF REQUIRED)
-  SET(LIBS ${LIBS} ${TIFF_LIBRARIES})
-  ADD_DEFINITIONS(-DENABLE_TIFF)
+  SET(LIBS ${LIBS} ${LibTIFF4})
 ENDIF()
 IF(ENABLE_WEBP)
-  find_path(WEBP_INCLUDE_DIR mux_types.h)
-  find_library(WEBP_LIBRARIES NAMES webp libwebp)
-  SET(LIBS ${LIBS} ${WEBP_LIBRARIES})
-  find_library(WEBP_MUX_LIBRARIES NAMES webpmux libwebpmux)
-  SET(LIBS ${LIBS} ${WEBP_MUX_LIBRARIES})
-  ADD_DEFINITIONS(-DENABLE_WEBP)
+  SET(LIBS ${LIBS} ${LibWebP})
 ENDIF()
 IF(ENABLE_RAW)
-  find_path(RAW_INCLUDE_DIR libraw.h)
-  find_library(RAW_LIBRARIES NAMES raw_static libraw_static)
-  SET(LIBS ${LIBS} ${RAW_LIBRARIES})
+  SET(LIBS ${LIBS} ${LibRawLite})
 ENDIF()
 IF(ENABLE_OPENJP)
-  find_path(OPENJP_INCLUDE_DIR openjpeg.h)
-  find_library(OPENJP_LIBRARIES NAMES openjp2 libopenjp2)
-  SET(LIBS ${LIBS} ${OPENJP_LIBRARIES})
+  SET(LIBS ${LIBS} ${LibOpenJPEG})
+ENDIF()
+IF(ENABLE_OPENEXR)
+  SET(LIBS ${LIBS} ${OpenEXR})
+ENDIF()
+IF(ENABLE_JXR)
+  SET(LIBS ${LIBS} ${LibJXR})
 ENDIF()
 
-IF(MSVC)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-ENDIF()
 
-# Set default output dirs
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+add_library ( freeimage ${LIBS} )
 
-# Set libraries for static or DLL build
-IF(FREEIMAGE_BUILD_STATIC)
-  SET(FREEIMAGE_BUILD_FLAGS -DFREEIMAGE_LIB)
-ELSE(FREEIMAGE_BUILD_STATIC)
-  SET(FREEIMAGE_LIBRARIES FreeImage)
-  SET(FREEIMAGE_BUILD_DLL ON)
-ENDIF(FREEIMAGE_BUILD_STATIC)
-
-SET(FREEIMAGE_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/Source)
-SET(FREEIMAGE_LIBRARY_DIRS ${CMAKE_BINARY_DIR}/Lib)
-
-add_subdirectory(Source)
+install ( TARGETS freeimage DESTINATION lib )
+install ( FILES Source/FreeImage.h DESTINATION include )
 
